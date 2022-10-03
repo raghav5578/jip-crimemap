@@ -30,7 +30,7 @@ columns = sorted(df.columns)
 discrete = [x for x in columns if df[x].dtype == object]
 continuous = [x for x in columns if x not in discrete]
 
-yearlist = ["2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022"]
+yearlist = ["2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021"]
 crime_subsetlist=["TotaalGeregistreerdeMisdrijven_1","GeregistreerdeMisdrijvenRelatief_2",
                   "GeregistreerdeMisdrijvenPer1000Inw_3", "TotaalOpgehelderdeMisdrijven_4",
                   "OpgehelderdeMisdrijvenRelatief_5", "RegistratiesVanVerdachten_6"]
@@ -145,7 +145,7 @@ def merge_crimes(unfindable, dutch_municipalities_dict, df_total):
             df_total[crime_subset][municipality], 1).astype('float')
     except KeyError:
         unfindable.append(municipality)
-        dutch_municipalities_dict['properties']['Crimes'] = 30.0
+        dutch_municipalities_dict['properties']['Crimes'] = 0.0
     return dutch_municipalities_dict
 
 
@@ -172,7 +172,7 @@ def create_figure(dutch_municipalities_dict):
     hover.tooltips = [
         ("Name", "@name"),
         ("Crimes", "@Crimes{0.0}"),
-        ("(Long, Lat)", "($x, $y)"),
+        # ("(Long, Lat)", "($x, $y)"),
     ]
     return p
 
