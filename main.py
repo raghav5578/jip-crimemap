@@ -72,7 +72,8 @@ def install():
     import pip
     pip.main(['install', 'IPython'])
     pip.main(['install', 'bokeh'])
-
+    
+install()
 
 import pandas as pd
 
