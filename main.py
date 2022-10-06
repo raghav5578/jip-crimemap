@@ -13,6 +13,8 @@ from bokeh.models import Select, Button, CustomJS
 from bokeh.palettes import Spectral5
 from bokeh.plotting import curdoc, figure
 from bokeh.sampledata.autompg import autompg_clean as df
+import holoviews as hv
+hv.extension('matplotlib')
 
 df = df.copy()
 
@@ -73,7 +75,7 @@ from bokeh.models import (
     EqHistColorMapper
 )
 import colorcet as cc
-# from bokeh.palettes import Turbo256 as palette
+from bokeh.palettes import Turbo256, Reds256
 import os
 
 import json
@@ -149,10 +151,10 @@ def merge_crimes(unfindable, dutch_municipalities_dict, df_total):
     return dutch_municipalities_dict
 
 
-def create_figure(dutch_municipalities_dict):
+def create_figure(dutch_municipalities_dict, palette_s):
 
     geo_source = GeoJSONDataSource(geojson=json.dumps(dutch_municipalities_dict))
-    color_mapper = EqHistColorMapper(bins=100000, palette=cc.blues)
+    color_mapper = EqHistColorMapper(bins=100000, palette=palette_s)
 
     TOOLS = "pan,wheel_zoom,box_zoom,reset,hover,save"
 
@@ -177,7 +179,7 @@ def create_figure(dutch_municipalities_dict):
     return p
 
 
-def update_figure(reload_s, year_s, type_s, subset_s):
+def update_figure(reload_s, year_s, type_s, subset_s, palette_s):
     reload_a = True if (reload_s == 'Yes') else False
     df = importdata(reload_a)
     df = selection(df, year_s, subset_s, type_s)
@@ -187,12 +189,12 @@ def update_figure(reload_s, year_s, type_s, subset_s):
         dutch_municipalities_dicts = json.loads(f.read(), object_hook=OrderedDict)
     dutch_municipalities_dicts['features'] = [merge_crimes(unfindables, municipality, df) for municipality in
                                              dutch_municipalities_dicts['features']]
-    return create_figure(dutch_municipalities_dicts)
+    return create_figure(dutch_municipalities_dicts, palette_s)
 
 
 #To update the figure, have to send back after drop down
 def update(attr, old, new):
-    global year, reload, type_of_crimes, crime_subset
+    global year, reload, type_of_crimes, crime_subset, palette
     if new in yearlist:
         year = new
     elif new in crime_subsetlist:
@@ -201,11 +203,13 @@ def update(attr, old, new):
         type_of_crimes = new
     elif new in ["Yes", "No"]:
         reload = new
-    layout.children[1] = update_figure(reload, year, type_of_crimes, crime_subset)
+    elif new in ['Red', 'Blue']:
+        if new == 'Red':
+            palette = Reds256[::-1]
+        elif new == 'Blue':
+            palette = cc.blues
+    layout.children[1] = update_figure(reload, year, type_of_crimes, crime_subset, palette)
 
-
-# only run install first time
-# install()
 
 # set all the variables, should be replaced by sliders/buttons
 crime_subset = 'TotaalGeregistreerdeMisdrijven_1'
@@ -213,6 +217,9 @@ year = '2017'
 type_of_crimes = 'Misdrijven, totaal'
 reload = False
 unfindable = []
+palette = Reds256[::-1]
+
+
 
 # load the data, if reload is true, it will reload data from cbs
 df_crimes = importdata(reload)
@@ -233,7 +240,7 @@ dutch_municipalities_dict['features'] = [merge_crimes(unfindable, municipality, 
 if len(unfindable) > 0:
     print("These municipalities can't be found:")
 print(unfindable)
-create_figure(dutch_municipalities_dict)
+create_figure(dutch_municipalities_dict, palette)
 
 year_sel = Select(title='Year', value='2017', options=yearlist)
 year_sel.on_change('value', update)
@@ -247,8 +254,11 @@ type_of_crime_sel.on_change('value', update)
 reload_sel = Select(title='Reload', value='No', options=["Yes", "No"])
 reload_sel.on_change('value', update)
 
-controls = column(year_sel, crime_subset_sel, reload_sel, type_of_crime_sel, width=200)
-layout = row(controls, create_figure(dutch_municipalities_dict))
+colour_sel = Select(title='Colour', value='Red', options=["Red", "Blue"])
+colour_sel.on_change('value', update)
+
+controls = column(year_sel, crime_subset_sel, reload_sel, type_of_crime_sel, colour_sel, width=200)
+layout = row(controls, create_figure(dutch_municipalities_dict, palette))
 
 curdoc().theme = 'dark_minimal'
 curdoc().add_root(layout)
