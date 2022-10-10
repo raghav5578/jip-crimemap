@@ -264,7 +264,8 @@ def create_figure(dutch_municipalities_dict_s, palette_s):
     TOOLS = "pan,wheel_zoom,box_zoom,reset,hover,save"
 
     p = bokeh.plotting.figure(
-        background_fill_color="white", title="Misdrijven per gemeente", tools=TOOLS,
+        background_fill_color="white", title=str("Crimes per municipality. "+year+ ", "+
+                                                 type_of_crimes+ ", "+crime_subset), tools=TOOLS,
         x_axis_location=None, y_axis_location=None
     )
 
