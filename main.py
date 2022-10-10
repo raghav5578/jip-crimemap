@@ -20,7 +20,6 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-
 from bokeh.models import (
     GeoJSONDataSource,
     HoverTool,
@@ -35,6 +34,7 @@ from collections import OrderedDict
 
 import cbsodata
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -61,7 +61,7 @@ yearlist = ["2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "201
 crime_subsetlist = ["TotaalGeregistreerdeMisdrijven_1", "GeregistreerdeMisdrijvenRelatief_2",
                     "GeregistreerdeMisdrijvenPer1000Inw_3", "TotaalOpgehelderdeMisdrijven_4",
                     "OpgehelderdeMisdrijvenRelatief_5", "RegistratiesVanVerdachten_6"]
-typelist = ['Misdrijven, totaal', '1 Vermogensmisdrijven', '11 Diefstal/verduistering en inbraak',
+typelist = ['Misdrijven, totaal', 'CHI value', '1 Vermogensmisdrijven', '11 Diefstal/verduistering en inbraak',
             '111 Diefstal en inbraak met geweld', '112 Diefstal en inbraak zonder geweld', '12 Bedrog',
             '121 Oplichting',
             '122 Flessentrekkerij', '123 Bedrog (overig)', '13 Valsheidsmisdrijven', '131 Muntmisdrijf',
@@ -86,7 +86,7 @@ typelist = ['Misdrijven, totaal', '1 Vermogensmisdrijven', '11 Diefstal/verduist
             '54 Rijden tijdens rijverbod', '55 Voeren vals kenteken', '56 Joyriding',
             '57 Weigeren blaastest/bloedonderzoek ed', '58 Verkeersmisdrijf (overig)', '6 Drugsmisdrijven',
             '61 Harddrugs', '62 Softdrugs', '6.3 Drugsmisdrijf (overig)', '7 Vuurwapenmisdrijven',
-            '9 Misdrijven overige wetten', '91 Militaire misdrijven', '92 Misdrijven (overig)', 'CHI value']
+            '9 Misdrijven overige wetten', '91 Militaire misdrijven', '92 Misdrijven (overig)']
 
 chidict = {
     'Misdrijven, totaal': 0, '1 Vermogensmisdrijven': 0, '11 Diefstal/verduistering en inbraak': 0,
@@ -117,9 +117,11 @@ chidict = {
 }
 
 colourlist = {
-    'Blue': cc.blues, 'Red': Reds256[::-1], 'Green': Greens256[::-1], 'Grey':Greys256[::-1], 'Rainbow': cc.CET_R1, 'Turbo': Turbo256,
-    'Inferno': Inferno256[::-1], 'Magma': Magma256[::-1], 'Plasma':Plasma256[::-1], 'Fridge': cc.CET_L19
+    'Blue': cc.blues, 'Red': Reds256[::-1], 'Green': Greens256[::-1], 'Grey': Greys256[::-1], 'Rainbow': cc.CET_R1,
+    'Turbo': Turbo256,
+    'Inferno': Inferno256[::-1], 'Magma': Magma256[::-1], 'Plasma': Plasma256[::-1], 'Fridge': cc.CET_L19
 }
+
 
 def importdata(reload_s):
     if (not os.path.exists('dataframe.csv')) or reload_s:
@@ -137,33 +139,66 @@ def importdata(reload_s):
                                                                       'RegistratiesVanVerdachten_6': float})
 
 
-def multiplychi(rosw):
+def multiplychi_1(rosw):
     return chidict[rosw["SoortMisdrijf"]] * rosw["TotaalGeregistreerdeMisdrijven_1"]
+
+
+def multiplychi_2(rosw):
+    return chidict[rosw["SoortMisdrijf"]] * rosw["GeregistreerdeMisdrijvenRelatief_2"]
+
+
+def multiplychi_3(rosw):
+    return chidict[rosw["SoortMisdrijf"]] * rosw["GeregistreerdeMisdrijvenPer1000Inw_3"]
+
+
+def multiplychi_4(rosw):
+    return chidict[rosw["SoortMisdrijf"]] * rosw["TotaalOpgehelderdeMisdrijven_4"]
+
+
+def multiplychi_5(rosw):
+    return chidict[rosw["SoortMisdrijf"]] * rosw["OpgehelderdeMisdrijvenRelatief_5"]
+
+
+def multiplychi_6(rosw):
+    return chidict[rosw["SoortMisdrijf"]] * rosw["RegistratiesVanVerdachten_6"]
 
 
 def add_chi(df_crimes_s, reload_s):
     if (not os.path.exists('chidf.pkl')) or reload_s:
-        df_crimes_s["CHI"] = df_crimes_s.apply(multiplychi, axis=1)
+        df_crimes_s["CHI_1"] = df_crimes_s.apply(multiplychi_1, axis=1)
+        df_crimes_s["CHI_2"] = df_crimes_s.apply(multiplychi_2, axis=1)
+        df_crimes_s["CHI_3"] = df_crimes_s.apply(multiplychi_3, axis=1)
+        df_crimes_s["CHI_4"] = df_crimes_s.apply(multiplychi_4, axis=1)
+        df_crimes_s["CHI_5"] = df_crimes_s.apply(multiplychi_5, axis=1)
+        df_crimes_s["CHI_6"] = df_crimes_s.apply(multiplychi_6, axis=1)
         column_names = ["SoortMisdrijf", "RegioS", "Perioden", "TotaalGeregistreerdeMisdrijven_1",
                         "GeregistreerdeMisdrijvenRelatief_2", "GeregistreerdeMisdrijvenPer1000Inw_3",
-                        "TotaalOpgehelderdeMisdrijven_4", "OpgehelderdeMisdrijvenRelatief_5", "RegistratiesVanVerdachten_6",
-                        "CHI"]
+                        "TotaalOpgehelderdeMisdrijven_4", "OpgehelderdeMisdrijvenRelatief_5",
+                        "RegistratiesVanVerdachten_6",
+                        "CHI_1", "CHI_2", "CHI_3", "CHI_4", "CHI_5", "CHI_6"]
         df_chi = pd.DataFrame(columns=column_names)
         regios = df_crimes_s.RegioS.unique()
         for regio in regios:
             for years in yearlist:
                 df_subset = df_crimes_s[df_crimes_s['RegioS'] == regio]
                 df_subset = df_subset[df_subset['Perioden'] == years]
-                df_sum = df_subset['CHI'].sum()
+                df_sum = df_subset['CHI_1'].sum()
+                df_sum_2 = df_subset['CHI_2'].sum()
+                df_sum_3 = df_subset['CHI_3'].sum()
+                df_sum_4 = df_subset['CHI_1'].sum()
+                df_sum_5 = df_subset['CHI_2'].sum()
+                df_sum_6 = df_subset['CHI_3'].sum()
                 crime = {"SoortMisdrijf": 'CHI value', "RegioS": regio, 'Perioden': years,
-                                       "TotaalGeregistreerdeMisdrijven_1": 0, "GeregistreerdeMisdrijvenRelatief_2": 0,
-                                       "GeregistreerdeMisdrijvenPer1000Inw_3": 0, "TotaalOpgehelderdeMisdrijven_4": 0,
-                                       "OpgehelderdeMisdrijvenRelatief_5": 0, "RegistratiesVanVerdachten_6": 0, "CHI": df_sum}
+                         "TotaalGeregistreerdeMisdrijven_1": df_sum, "GeregistreerdeMisdrijvenRelatief_2": df_sum_2,
+                         "GeregistreerdeMisdrijvenPer1000Inw_3": df_sum_3, "TotaalOpgehelderdeMisdrijven_4": df_sum_4,
+                         "OpgehelderdeMisdrijvenRelatief_5": df_sum_5, "RegistratiesVanVerdachten_6": df_sum_6
+                         }
                 df_chi = df_chi.append(crime, ignore_index=True)
-
 
         frames = [df_crimes_s, df_chi]
         df_crime = pd.concat(frames)
+        for i in range (1, 6):
+            df_crime.drop([str('CHI_'+str(i))], axis=1)
         df_crime = df_crime.fillna(0)
         df_crime.to_pickle("chidf.pkl")
     else:
@@ -256,17 +291,14 @@ def update_figure(reload_s, year_s, type_s, subset_s, palette_s):
     # add the crime harm index column
     df_s = add_chi(df_s, reload_a)
     # select the correct year and type
-    if type_s == "CHI value":
-        subset_s = "CHI"
-    else:
-        subset_s = crime_subset
     df_s = selection(df_s, year_s, subset_s, type_s)
     # fix the weird municipalities
     df_s = fixmunic(df_s)
     unfindables = []
     with open(r'Gemeenten.geojson', 'r') as f_s:
         dutch_municipalities_dicts = json.loads(f_s.read(), object_hook=OrderedDict)
-    dutch_municipalities_dicts['features'] = [merge_crimes(unfindables, municipality, df_s, subset_s) for municipality in
+    dutch_municipalities_dicts['features'] = [merge_crimes(unfindables, municipality, df_s, subset_s) for municipality
+                                              in
                                               dutch_municipalities_dicts['features']]
     return create_figure(dutch_municipalities_dicts, palette_s)
 
@@ -299,8 +331,6 @@ palette = colourlist['Red']
 df_crimes = importdata(reload)
 df_crimes = add_chi(df_crimes, reload)
 # select the correct amount of data
-if type_of_crimes == "CHI value":
-    crime_subset = "CHI"
 df_crimes = selection(df_crimes, year, crime_subset, type_of_crimes)
 
 # open nl geojson data
@@ -310,7 +340,8 @@ with open(r'Gemeenten.geojson', 'r') as f:
 # fix the municipalities in the dataframe to match the geojson file
 df_crimes = fixmunic(df_crimes)
 # merge geojson data with crimedata
-dutch_municipalities_dict['features'] = [merge_crimes(unfindable, municipality, df_crimes, crime_subset) for municipality in
+dutch_municipalities_dict['features'] = [merge_crimes(unfindable, municipality, df_crimes, crime_subset) for
+                                         municipality in
                                          dutch_municipalities_dict['features']]
 # print all municipalities that can't be found in df
 if len(unfindable) > 0:
@@ -327,7 +358,8 @@ crime_subset_sel.on_change('value', update)
 type_of_crime_sel = Select(title='Type of crime', value='Misdrijven, totaal', options=typelist)
 type_of_crime_sel.on_change('value', update)
 
-reload_sel = Select(title='Reload: Warning, will reload data and will take a long time', value='No', options=["Yes", "No"])
+reload_sel = Select(title='Reload: Warning, will reload data and will take a long time', value='No',
+                    options=["Yes", "No"])
 reload_sel.on_change('value', update)
 
 colour_sel = Select(title='Colour', value='Red', options=list(colourlist.keys()))
