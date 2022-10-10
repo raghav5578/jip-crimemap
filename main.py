@@ -5,30 +5,29 @@ def install():
     pip.main(['install', 'matplotlib'])
     pip.main(['install', 'colorcet'])
     pip.main(['install', 'cbsodata'])
+    pip.main(['install', 'holoviews'])
 
 
 # install()
 import bokeh
 from bokeh.layouts import column, row
-from bokeh.models import Select, Button, CustomJS
+from bokeh.models import Select
 from bokeh.palettes import Spectral5
-from bokeh.plotting import curdoc, figure
+from bokeh.plotting import curdoc
 from bokeh.sampledata.autompg import autompg_clean as df
 import holoviews as hv
 import pandas as pd
 
 import matplotlib.pyplot as plt
 
-from bokeh.plotting import figure, save
 
-from bokeh.io import show, output_notebook
 from bokeh.models import (
     GeoJSONDataSource,
     HoverTool,
     EqHistColorMapper
 )
 import colorcet as cc
-from bokeh.palettes import Turbo256, Reds256
+from bokeh.palettes import Turbo256, Reds256, Greens256, Inferno256, Magma256, Plasma256, Greys256
 import os
 
 import json
@@ -117,6 +116,10 @@ chidict = {
     '9 Misdrijven overige wetten': 0, '91 Militaire misdrijven': 0, '92 Misdrijven (overig)': 0
 }
 
+colourlist = {
+    'Blue': cc.blues, 'Red': Reds256[::-1], 'Green': Greens256[::-1], 'Grey':Greys256[::-1], 'Rainbow': cc.CET_R1, 'Turbo': Turbo256,
+    'Inferno': Inferno256[::-1], 'Magma': Magma256[::-1], 'Plasma':Plasma256[::-1], 'Fridge': cc.CET_L19
+}
 
 def importdata(reload_s):
     if (not os.path.exists('dataframe.csv')) or reload_s:
@@ -226,7 +229,7 @@ def create_figure(dutch_municipalities_dict_s, palette_s):
     TOOLS = "pan,wheel_zoom,box_zoom,reset,hover,save"
 
     p = bokeh.plotting.figure(
-        title="Misdrijven per gemeente", tools=TOOLS,
+        background_fill_color="white", title="Misdrijven per gemeente", tools=TOOLS,
         x_axis_location=None, y_axis_location=None
     )
 
@@ -234,7 +237,7 @@ def create_figure(dutch_municipalities_dict_s, palette_s):
 
     p.patches('xs', 'ys', source=geo_source,
               fill_color={'field': 'Crimes', 'transform': color_mapper},
-              fill_alpha=0.7, line_color="white", line_width=0.5)
+              fill_alpha=0.7, line_color="lightgrey", line_width=0.5)
 
     hover = p.select_one(HoverTool)
     hover.point_policy = "follow_mouse"
@@ -279,11 +282,8 @@ def update(attr, old, new):
         type_of_crimes = new
     elif new in ["Yes", "No"]:
         reload = new
-    elif new in ['Red', 'Blue']:
-        if new == 'Red':
-            palette = Reds256[::-1]
-        elif new == 'Blue':
-            palette = cc.blues
+    elif new in colourlist:
+        palette = colourlist[new]
     layout.children[1] = update_figure(reload, year, type_of_crimes, crime_subset, palette)
 
 
@@ -293,7 +293,7 @@ year = '2017'
 type_of_crimes = 'Misdrijven, totaal'
 reload = False
 unfindable = []
-palette = Reds256[::-1]
+palette = colourlist['Red']
 
 # load the data, if reload is true, it will reload data from cbs
 df_crimes = importdata(reload)
@@ -327,10 +327,10 @@ crime_subset_sel.on_change('value', update)
 type_of_crime_sel = Select(title='Type of crime', value='Misdrijven, totaal', options=typelist)
 type_of_crime_sel.on_change('value', update)
 
-reload_sel = Select(title='Reload', value='No', options=["Yes", "No"])
+reload_sel = Select(title='Reload: Warning, will reload data and will take a long time', value='No', options=["Yes", "No"])
 reload_sel.on_change('value', update)
 
-colour_sel = Select(title='Colour', value='Red', options=["Red", "Blue"])
+colour_sel = Select(title='Colour', value='Red', options=list(colourlist.keys()))
 colour_sel.on_change('value', update)
 
 controls = column(year_sel, crime_subset_sel, reload_sel, type_of_crime_sel, colour_sel, width=200)
