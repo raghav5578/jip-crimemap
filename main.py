@@ -1,6 +1,7 @@
 def install():
     import pip
     pip.main(['install', 'IPython'])
+    pip.main(['install', 'pandas'])
     pip.main(['install', 'bokeh'])
     pip.main(['install', 'matplotlib'])
     pip.main(['install', 'colorcet'])
